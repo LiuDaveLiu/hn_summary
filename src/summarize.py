@@ -16,11 +16,13 @@ import string
 import requests
 import logging
 import urllib.parse
+import publisher_fanout
+# import pdb
 
 from dbmodels import HackerNewsStory, StorySummary
 import hnapi
 from github_api import github_readme_text
-import telegram_bot
+#import telegram_bot
 
 
 # the model we use for summarization
@@ -57,7 +59,7 @@ db_host = os.environ['HNSUM_POSTGRES_HOST']
 user    = os.environ['HNSUM_POSTGRES_USER']
 passwd  = os.environ['HNSUM_POSTGRES_PASS']
 
-DBURI = 'postgresql+psycopg2://%s:%s@%s:5432/hnsum' % (user, passwd, db_host)
+DBURI = 'postgresql+psycopg2://%s:%s@%s:5432/postgres' % (user, passwd, db_host)
 
 engine = create_engine(DBURI, pool_pre_ping=True, echo=False)
 
@@ -180,9 +182,9 @@ def process_news():
                 logger.info(f"{story.title} has no url to summarize")
                 continue
 
-            if urllib.parse.urlparse(url).netloc in ["youtube.com"]:
-                logger.info(f"skipping hopeless {url}")
-                continue
+            # if urllib.parse.urlparse(url).netloc in ["youtube.com"]:
+            #     logger.info(f"skipping hopeless {url}")
+            #     continue
             
             # we have a url to process
             try:
@@ -208,8 +210,10 @@ def process_news():
             
             session.add(summary)
             session.commit()
-            logger.info(f"output length:  {len(summary_text)}")            
-            telegram_bot.send_message(message)
+            logger.info(f"output length:  {len(summary_text)}")
+            #pdb.set_trace()
+            publisher_fanout.send_message(story.title,story.url+summary_text)
+            #telegram_bot.send_message(message)
 
             
 
